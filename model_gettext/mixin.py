@@ -6,13 +6,13 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 class TransMixin(object):
-    def save(self):
-        super(TransMixin, self).save()
+    def save(self, *args, **kwargs):
+        super(TransMixin, self).save(*args, **kwargs)
         self.update_translations()
 
     def update_translations(self):
         interesting_types = getattr(
-            settings, 'MODEL_GETTEXT_TYPES', ['CharField', 'TextArea'])
+            settings, 'MODEL_GETTEXT_TYPES', ['CharField', 'TextField'])
         fields_to_translate = []
         for field in self._meta.get_fields_with_model():
             if field[0].get_internal_type() in interesting_types:
@@ -45,6 +45,7 @@ class TransMixin(object):
 
     def create_po_entries(self, fields_to_translate):
         pofile = self.get_pofile()
+
         for field in fields_to_translate:
             trans_value = getattr(self, field.name)
             entry = pofile.find(trans_value)
@@ -52,7 +53,8 @@ class TransMixin(object):
                 entry = polib.POEntry(
                     msgid=trans_value,
                     msgstr=u'',
-                    occurrences=[])
+                    occurrences=[('table:%s' % self._meta.db_table,
+                                  'pk:%s' % self.pk)])
                 pofile.append(entry)
             else:
                 # See if the entry text has changed
