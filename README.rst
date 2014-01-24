@@ -27,6 +27,9 @@ can be overridden by setting MODEL_GETTEXT_TYPES in settings.py. E.g.
 
   MODEL_GETTEXT_TYPES = ['CharField',]
 
+Currently, the project level locale directory is used, so it should be present
+for this app to work!
+
 
 Use with django-rosetta
 -----------------------
