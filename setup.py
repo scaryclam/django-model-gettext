@@ -26,6 +26,7 @@ setup(name='django-model-gettext',
           'Topic :: Other/Nonlisted Topic'],
       install_requires=[
           'django>=1.4',
+          'polib==1.0.3',
       ],
       )
 
