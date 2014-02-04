@@ -60,6 +60,8 @@ class TransMixin(object):
         for pofile_path, pofile in pofiles.iteritems():
             for field in fields_to_translate:
                 trans_value = getattr(self, field.name)
+                if not trans_value:
+                    continue
                 entry = pofile.find(trans_value)
                 if not entry:
                     entry = polib.POEntry(
@@ -75,3 +77,4 @@ class TransMixin(object):
                         entry.msgid = trans_value
                         entry.msgstr = u''
                 pofile.save(pofile_path)
+
