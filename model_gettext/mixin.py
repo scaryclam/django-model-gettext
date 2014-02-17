@@ -2,7 +2,6 @@ import os
 import glob
 import polib
 
-
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -33,7 +32,6 @@ class TransMixin(object):
         except AttributeError:
             raise ImproperlyConfigured(
                 "MODEL_GETTEXT_POFILE is missing from the settings")
-
         for pofile_dir in locale_dirs:
             pofile_path = os.path.join(pofile_dir, 'LC_MESSAGES', pofile_name)
             if os.path.exists(pofile_path):
@@ -57,24 +55,46 @@ class TransMixin(object):
 
     def create_po_entries(self, fields_to_translate):
         pofiles = self.get_pofile()
+        occurrence_dict = {}
         for pofile_path, pofile in pofiles.iteritems():
+            [occurrence_dict.update({entry.occurrences[0][0]: entry}) for entry in pofile]
             for field in fields_to_translate:
                 trans_value = getattr(self, field.name)
                 if not trans_value:
                     continue
                 entry = pofile.find(trans_value)
+                occurrence = ('table:%s:field:%s' % (self._meta.db_table, field.name),
+                              'pk:%s' % self.pk)
                 if not entry:
-                    entry = polib.POEntry(
+                    # There was no entry but we will need to check if the
+                    # occurence is something that was previously elsewhere so
+                    # we can remove it. Any occurences that end up with a zero
+                    # count should be made obsolete
+                    new_entry = polib.POEntry(
                         msgid=trans_value,
                         msgstr=u'',
-                        occurrences=[('table:%s' % self._meta.db_table,
-                                      'pk:%s' % self.pk)])
-                    pofile.append(entry)
+                        occurrences=[occurrence])
+
+                    # Check for previous occurence
+                    _remove_old(occurrence_dict, occurrence)
+                    pofile.append(new_entry)
                 else:
                     # See if the entry text has changed
                     if trans_value != entry.msgid:
                         # Replace it
                         entry.msgid = trans_value
                         entry.msgstr = u''
+                    # Is this a new occurrence?
+                    if occurrence not in entry.occurrences:
+                        entry.occurrences.append(occurrence)
+                    # Is this a changed occurrence?
+                    _remove_old(occurrence_dict, occurrence)
                 pofile.save(pofile_path)
 
+    def _remove_old(self, occurrence, occurrence_dict):
+        if occurrence_dict.has_key(occurrence):
+            old_entry = occurrence_dict[occurrence]
+            old_entry.occurrences.remove((occurrence, ''))
+            # If empty, make this obsolete
+            if not old_entry.occurrences:
+                old_entry.obsolete = True
