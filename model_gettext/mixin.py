@@ -8,19 +8,42 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 class TransMixin(object):
-    def save(self, *args, **kwargs):
-        super(TransMixin, self).save(*args, **kwargs)
-        self.update_translations()
+    def __init__(self, *args, **kwargs):
+        self._set_trans_fields()
+        super(TransMixin, self).__init__(*args, **kwargs)
 
-    def update_translations(self):
+    def _set_trans_fields(self):
         interesting_types = getattr(
             settings, 'MODEL_GETTEXT_TYPES', ['CharField', 'TextField'])
         fields_to_translate = []
         for field in self._meta.get_fields_with_model():
             if field[0].get_internal_type() in interesting_types:
                 fields_to_translate.append(field[0])
-                print "Added field", field[0]
-        self.create_po_entries(fields_to_translate)
+            self._trans_fields = fields_to_translate
+
+    def save(self, *args, **kwargs):
+        super(TransMixin, self).save(*args, **kwargs)
+        if not getattr(self, '_trans_fields', None):
+            self._set_trans_fields()
+        self.update_translations()
+
+    def __getattr__(self, *args, **kwargs):
+        print "Getting something"
+        ret_val = super(TransMixin, self).__getattr__(*args, **kwargs)
+        if getattr(self, '_trans_fields', None) and args[0] in self._trans_fields:
+            return ugettext(ret_val).replace('%%', '%')
+        return ret_val
+
+    def update_translations(self):
+        if not getattr(self, '_trans_fields', None):
+            interesting_types = getattr(
+                settings, 'MODEL_GETTEXT_TYPES', ['CharField', 'TextField'])
+            fields_to_translate = []
+            for field in self._meta.get_fields_with_model():
+                if field[0].get_internal_type() in interesting_types:
+                    fields_to_translate.append(field[0])
+            self._trans_fields = fields_to_translate
+        self.create_po_entries(self._trans_fields)
 
     def get_pofile(self):
         locale_dir = os.path.abspath('locale')
