@@ -2,15 +2,15 @@ import os
 import glob
 import polib
 
-
 from django.conf import settings
+from django.utils.translation import ugettext
 from django.core.exceptions import ImproperlyConfigured
 
 
 class TransMixin(object):
     def __init__(self, *args, **kwargs):
-        self._set_trans_fields()
         super(TransMixin, self).__init__(*args, **kwargs)
+        self._set_trans_fields()
 
     def _set_trans_fields(self):
         interesting_types = getattr(
@@ -18,8 +18,8 @@ class TransMixin(object):
         fields_to_translate = []
         for field in self._meta.get_fields_with_model():
             if field[0].get_internal_type() in interesting_types:
-                fields_to_translate.append(field[0])
-            self._trans_fields = fields_to_translate
+                fields_to_translate.append(field[0].attname)
+        self._trans_fields = fields_to_translate
 
     def save(self, *args, **kwargs):
         super(TransMixin, self).save(*args, **kwargs)
@@ -27,22 +27,20 @@ class TransMixin(object):
             self._set_trans_fields()
         self.update_translations()
 
-    def __getattr__(self, *args, **kwargs):
-        print "Getting something"
-        ret_val = super(TransMixin, self).__getattr__(*args, **kwargs)
-        if getattr(self, '_trans_fields', None) and args[0] in self._trans_fields:
-            return ugettext(ret_val).replace('%%', '%')
-        return ret_val
+    #def __getattribute__(self, attr):
+        #print "Getting something"
+        ##import ipdb
+        ##ipdb.set_trace()
+        #ret_val = object.__getattribute__(self, attr)
+        #if not ret_val:
+            #return
+        #if hasattr(self, '_trans_fields') and attr in object.__getattribute__(self, '_trans_fields'):
+            #return ugettext(ret_val).replace('%%', '%')
+        #return ret_val
 
     def update_translations(self):
         if not getattr(self, '_trans_fields', None):
-            interesting_types = getattr(
-                settings, 'MODEL_GETTEXT_TYPES', ['CharField', 'TextField'])
-            fields_to_translate = []
-            for field in self._meta.get_fields_with_model():
-                if field[0].get_internal_type() in interesting_types:
-                    fields_to_translate.append(field[0])
-            self._trans_fields = fields_to_translate
+            self._set_trans_fields()
         self.create_po_entries(self._trans_fields)
 
     def get_pofile(self):
@@ -90,7 +88,7 @@ class TransMixin(object):
                     entry = polib.POEntry(
                         msgid=trans_value,
                         msgstr=u'',
-                        occurrences=[('table:%s' % self._meta.db_table,
+                        occurrences=[('table/%s' % self._meta.db_table,
                                       'pk:%s' % self.pk)])
                     pofile.append(entry)
                 else:
@@ -100,4 +98,3 @@ class TransMixin(object):
                         entry.msgid = trans_value
                         entry.msgstr = u''
                 pofile.save(pofile_path)
-
