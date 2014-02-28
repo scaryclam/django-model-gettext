@@ -18,7 +18,7 @@ class TransMixin(object):
         fields_to_translate = []
         for field in self._meta.get_fields_with_model():
             if field[0].get_internal_type() in interesting_types:
-                fields_to_translate.append(field[0].attname)
+                fields_to_translate.append(field[0])
         self._trans_fields = fields_to_translate
 
     def save(self, *args, **kwargs):
