@@ -27,16 +27,19 @@ class TransMixin(object):
             self._set_trans_fields()
         self.update_translations()
 
-    #def __getattribute__(self, attr):
-        #print "Getting something"
-        ##import ipdb
-        ##ipdb.set_trace()
-        #ret_val = object.__getattribute__(self, attr)
-        #if not ret_val:
-            #return
-        #if hasattr(self, '_trans_fields') and attr in object.__getattribute__(self, '_trans_fields'):
-            #return ugettext(ret_val).replace('%%', '%')
-        #return ret_val
+    def __getattribute__(self, attr):
+        ret_val = object.__getattribute__(self, attr)
+        if not ret_val:
+            return object.__getattribute__(self, attr)
+        if hasattr(self, '_trans_fields'):
+            trans_fields = object.__getattribute__(self, '_trans_fields')
+            if attr in [field.name for field in trans_fields]:
+                try:
+                    attr.upper()
+                except AttributeError:
+                    return ret_val
+                return ugettext(ret_val).replace('%%', '%')
+        return ret_val
 
     def update_translations(self):
         if not getattr(self, '_trans_fields', None):
@@ -88,8 +91,9 @@ class TransMixin(object):
                     entry = polib.POEntry(
                         msgid=trans_value,
                         msgstr=u'',
-                        occurrences=[('table/%s' % self._meta.db_table,
-                                      'pk:%s' % self.pk)])
+                        occurrences=[
+                            ('%s/%s' % (self._meta.db_table, field.name),
+                             '%s' % self.pk)])
                     pofile.append(entry)
                 else:
                     # See if the entry text has changed
