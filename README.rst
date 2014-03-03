@@ -17,10 +17,17 @@ Quickstart
 To use this app, simply import the Mixin into the models.py file that
 requires it and then add the Mixin to the required models.
 
-Then add the name of the po file you want to use into the MODEL_GETTEXT_POFILE
+Then add the top level directory that you wish to use into the MODEL_GETTEXT_LOCALE
 setting in your settings.py file. E.g:
 
-  MODEL_GETTEXT_POFILE = 'models.po'
+  MODEL_GETTEXT_LOCALE = 'models_locale'
+
+You will also need to set this directory in Django's LOCALE_PATHS:
+
+  LOCALE_PATHS = (
+      ...
+      os.path.join('/path/to/directory/', MODEL_GETTEXT_LOCALE),
+  )
 
 By default the CharField and TextField types will get translation entries. This
 can be overridden by setting MODEL_GETTEXT_TYPES in settings.py. E.g.
@@ -34,6 +41,5 @@ for this app to work!
 Use with django-rosetta
 -----------------------
 
-By default, django-rosetta only uses the django.po and djangojs.po files.
-As of writing, the develop branch of django-rosetta allows this to be changed
-by setting ROSETTA_POFILENAMES in settings.py
+Django rosetta should work with this library out of the box.
+

@@ -47,16 +47,17 @@ class TransMixin(object):
         self.create_po_entries(self._trans_fields)
 
     def get_pofile(self):
-        locale_dir = os.path.abspath('locale')
+        pofile_name = getattr(settings, 'MODEL_GETTEXT_POFILE', 'django.po')
+        try:
+            locale_dir_name = settings.MODEL_GETTEXT_LOCALE
+        except AttributeError:
+            raise ImproperlyConfigured(
+                "MODEL_GETTEXT_LOCALE is missing from the settings")
+
+        locale_dir = os.path.abspath(locale_dir_name)
         locale_dirs = filter(os.path.isdir, glob.glob('%s/*' % locale_dir))
 
         pofile_locations = {}
-
-        try:
-            pofile_name = settings.MODEL_GETTEXT_POFILE
-        except AttributeError:
-            raise ImproperlyConfigured(
-                "MODEL_GETTEXT_POFILE is missing from the settings")
 
         for pofile_dir in locale_dirs:
             pofile_path = os.path.join(pofile_dir, 'LC_MESSAGES', pofile_name)
