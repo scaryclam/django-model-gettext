@@ -23,9 +23,10 @@ class TransMixin(object):
 
     def save(self, *args, **kwargs):
         super(TransMixin, self).save(*args, **kwargs)
-        if not getattr(self, '_trans_fields', None):
-            self._set_trans_fields()
-        self.update_translations()
+        if getattr(settings, 'MODEL_GETTEXT_TRANSLATE', False):
+            if not getattr(self, '_trans_fields', None):
+                self._set_trans_fields()
+            self.update_translations()
 
     def __getattribute__(self, attr):
         ret_val = object.__getattribute__(self, attr)
