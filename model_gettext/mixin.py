@@ -8,6 +8,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 class TransMixin(object):
+    excluded_fields = []
+
     def __init__(self, *args, **kwargs):
         super(TransMixin, self).__init__(*args, **kwargs)
         self._set_trans_fields()
@@ -17,7 +19,9 @@ class TransMixin(object):
             settings, 'MODEL_GETTEXT_TYPES', ['CharField', 'TextField'])
         fields_to_translate = []
         for field in self._meta.get_fields_with_model():
-            if field[0].get_internal_type() in interesting_types:
+            is_interesting = field[0].get_internal_type() in interesting_types
+            is_excluded = field[0].get_attname() in self.excluded_fields
+            if is_interesting and not is_excluded:
                 fields_to_translate.append(field[0])
         self._trans_fields = fields_to_translate
 
